@@ -16,7 +16,8 @@ from ..tasks import *
 logger = logging.getLogger(__name__)
 
 from typing import List, Union
-
+import wandb
+from mteb.evaluation.evaluators.utils import cos_sim, dot_score
 
 class MTEB:
     def __init__(
@@ -205,6 +206,7 @@ class MTEB:
         model,
         verbosity=1,
         output_folder="results/result",
+        score = {"cos_sim": cos_sim, "dot": dot_score},
         eval_splits=None,
         overwrite_results=False,
         raise_error: bool = True,
@@ -244,14 +246,7 @@ class MTEB:
         while len(self.tasks) > 0:
             task = self.tasks[0]
             logger.info(f"\n\n********************** Evaluating {task.description['name']} **********************")
-
             # skip evaluation if results folder exists and overwrite_results is False
-            if output_folder is not None:
-                save_path = os.path.join(output_folder, f"{task.description['name']}{task.save_suffix}.json")
-                if os.path.exists(save_path) and overwrite_results is False:
-                    logger.warning(f"WARNING: {task.description['name']} results already exists. Skipping.")
-                    del self.tasks[0]
-                    continue
 
             try:
                 task_eval_splits = eval_splits if eval_splits is not None else task.description.get("eval_splits", [])
@@ -266,22 +261,32 @@ class MTEB:
                     "dataset_revision": task.description.get("revision", None),
                     "mteb_dataset_name": task.description["name"],
                 }
-                for split in task_eval_splits:
-                    tick = time()
-                    results = task.evaluate(model, split, **kwargs)
-                    tock = time()
-                    logger.info(f"Evaluation for {task.description['name']} on {split} took {tock - tick:.2f} seconds")
-                    results["evaluation_time"] = round(tock - tick, 2)
-                    task_results[split] = results
-                    if verbosity >= 1:
-                        logger.info(f"Scores: {results}")
+                for score_name, score in score.items():
+                    wandb.init(project="MTEB", name=task.description["name"]+"_"+score_name, config={**task.description, "score":score_name})
+                    #TODO(ihounie): add exception for other tasks that dont have score attr
+                    kwargs["score_functions"] = {score_name:score}
+                    kwargs["score_function"] = score_name
+                    for split in task_eval_splits:
+                        tick = time()
+                        results = task.evaluate(model, split, **kwargs)
+                        tock = time()
+                        logger.info(f"Evaluation for {task.description['name']} on {split} took {tock - tick:.2f} seconds")
+                        results["evaluation_time"] = round(tock - tick, 2)
+                        task_results[split] = results
+                        if verbosity >= 1:
+                            logger.info(f"Scores: {results}")
+                    if output_folder is not None:
+                        save_path = os.path.join(output_folder, f"{task.description['name']}{task.save_suffix}.json")
+                        if os.path.exists(save_path) and overwrite_results is False:
+                            logger.warning(f"WARNING: {task.description['name']} results already exists. Skipping.")
+                    # save results
+                    if output_folder is not None:
+                        with open(save_path, "w") as f_out:
+                            json.dump(task_results, f_out, indent=2, sort_keys=True)
 
-                # save results
-                if output_folder is not None:
-                    with open(save_path, "w") as f_out:
-                        json.dump(task_results, f_out, indent=2, sort_keys=True)
-
-                evaluation_results[task.description["name"]] = task_results
+                    evaluation_results[task.description["name"]] = task_results
+                    wandb.log(task_results)
+                    wandb.finish()
 
             except Exception as e:
                 logger.error(f"Error while evaluating {task.description['name']}: {e}")

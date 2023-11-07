@@ -41,3 +41,41 @@ def dot_score(a: torch.Tensor, b: torch.Tensor):
         b = b.unsqueeze(0)
 
     return torch.mm(a, b.transpose(0, 1))
+
+def linf(a, b):
+    """
+    Computes the infinite norm of a[i]-b[j] for all i and j.
+    :return: Matrix with linf[i][j]
+    """
+    if not isinstance(a, torch.Tensor):
+        a = torch.tensor(a)
+
+    if not isinstance(b, torch.Tensor):
+        b = torch.tensor(b)
+
+    if len(a.shape) == 1:
+        a = a.unsqueeze(0)
+
+    if len(b.shape) == 1:
+        b = b.unsqueeze(0)
+
+    return -torch.cdist(a, b, p=float("inf"))
+
+def l2(a, b):
+    """
+    Computes the l2 norm of a[i]-b[j] for all i and j.
+    :return: Matrix with linf[i][j]
+    """
+    if not isinstance(a, torch.Tensor):
+        a = torch.tensor(a)
+
+    if not isinstance(b, torch.Tensor):
+        b = torch.tensor(b)
+
+    if len(a.shape) == 1:
+        a = a.unsqueeze(0)
+
+    if len(b.shape) == 1:
+        b = b.unsqueeze(0)
+
+    return -torch.cdist(a, b, p=2)

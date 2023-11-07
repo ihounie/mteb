@@ -7,7 +7,8 @@ import torch
 from tqdm import trange
 
 from .Evaluator import Evaluator
-from .utils import cos_sim, dot_score
+from .utils import cos_sim, dot_score, linf, l2
+import wandb
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,8 @@ class RetrievalEvaluator(Evaluator):
         score_functions: List[Callable[[torch.Tensor, torch.Tensor], torch.Tensor]] = {
             "cos_sim": cos_sim,
             "dot": dot_score,
+            "linf": linf,
+            "l2": l2,
         },  # Score function, higher=more similar
         main_score_function: str = None,
         limit: int = None,
@@ -247,6 +250,7 @@ class RetrievalEvaluator(Evaluator):
         for k in AveP_at_k:
             AveP_at_k[k] = np.mean(AveP_at_k[k])
 
+        wandb.log({**num_hits_at_k, **precisions_at_k, **recall_at_k, **MRR, **ndcg, **AveP_at_k})
         return {**num_hits_at_k, **precisions_at_k, **recall_at_k, **MRR, **ndcg, **AveP_at_k}
 
     @staticmethod

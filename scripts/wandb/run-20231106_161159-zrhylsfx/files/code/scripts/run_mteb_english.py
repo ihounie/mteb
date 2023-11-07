@@ -5,7 +5,6 @@ import sys
 
 from mteb import MTEB
 from sentence_transformers import SentenceTransformer
-from mteb.evaluation.evaluators.utils import cos_sim, dot_score, linf, l2
 
 logging.basicConfig(level=logging.INFO)
 
@@ -55,7 +54,7 @@ TASK_LIST_RERANKING = [
 
 TASK_LIST_RETRIEVAL = [
     "ArguAna",
-    "QuoraRetrieval",
+    "ClimateFEVER",
     "CQADupstackAndroidRetrieval",
     "CQADupstackEnglishRetrieval",
     "CQADupstackGamingRetrieval",
@@ -68,7 +67,6 @@ TASK_LIST_RETRIEVAL = [
     "CQADupstackUnixRetrieval",
     "CQADupstackWebmastersRetrieval",
     "CQADupstackWordpressRetrieval",
-    "ClimateFEVER",
     "DBPedia",
     "FEVER",
     "FiQA2018",
@@ -76,6 +74,7 @@ TASK_LIST_RETRIEVAL = [
     "MSMARCO",
     "NFCorpus",
     "NQ",
+    "QuoraRetrieval",
     "SCIDOCS",
     "SciFact",
     "Touche2020",
@@ -95,21 +94,17 @@ TASK_LIST_STS = [
     "STSBenchmark",
     "SummEval",
 ]
-
+'''
 TASK_LIST = (
-    TASK_LIST_RETRIEVAL
-    #+ TASK_LIST_CLASSIFICATION
-    #+ TASK_LIST_CLUSTERING
-    #+ TASK_LIST_PAIR_CLASSIFICATION
-    #+ TASK_LIST_RERANKING
-    #+ TASK_LIST_STS
+    TASK_LIST_CLASSIFICATION
+    + TASK_LIST_CLUSTERING
+    + TASK_LIST_PAIR_CLASSIFICATION
+    + TASK_LIST_RERANKING
+    + TASK_LIST_RETRIEVAL
+    + TASK_LIST_STS
 )
-
-#TASK_LIST = ["QuoraRetrieval"]
-SCORE_DICT = {"linf": linf,
-            "cos_sim": cos_sim,
-             "dot": dot_score,
-             "l2": l2}
+'''
+TASK_LIST = ["QuoraRetrieval"]
 
 model_name = "average_word_embeddings_komninos"
 model = SentenceTransformer(model_name)
@@ -118,4 +113,4 @@ for task in TASK_LIST:
     logger.info(f"Running task: {task}")
     eval_splits = ["dev"] if task == "MSMARCO" else ["test"]
     evaluation = MTEB(tasks=[task], task_langs=["en"])  # Remove "en" for running all languages
-    evaluation.run(model, output_folder=f"results/{model_name}", eval_splits=eval_splits, score=SCORE_DICT)
+    evaluation.run(model, output_folder=f"results/{model_name}", eval_splits=eval_splits)
